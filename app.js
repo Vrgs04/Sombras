@@ -100,7 +100,7 @@ function init() {
   $("#btnPCountPlus").addEventListener("click", () => changeCount(+1));
 
   // reveal
-  $("#revealMask").addEventListener("click", () => $("#revealMask").classList.add("hidden"));
+  setupRevealGesture();
   $("#btnConfirmSeen").addEventListener("click", nextReveal);
 
   // discussion
@@ -245,11 +245,62 @@ function startGame() {
   renderReveal();
 }
 
+function setupRevealGesture() {
+  const mask = $("#revealMask");
+  const THRESHOLD = 70;
+  let startY = 0;
+  let active = false;
+
+  const resetDrag = () => {
+    mask.classList.remove("dragging");
+    mask.style.removeProperty("--dragY");
+  };
+
+  mask.addEventListener("pointerdown", (e) => {
+    if (mask.classList.contains("hidden")) return;
+    active = true;
+    startY = e.clientY;
+    mask.classList.add("dragging");
+    mask.setPointerCapture(e.pointerId);
+  });
+
+  mask.addEventListener("pointermove", (e) => {
+    if (!active) return;
+    const deltaY = Math.min(0, e.clientY - startY);
+    mask.style.setProperty("--dragY", `${deltaY}px`);
+  });
+
+  const finishGesture = (e) => {
+    if (!active) return;
+    const deltaY = e.clientY - startY;
+    active = false;
+
+    if (deltaY <= -THRESHOLD) {
+      mask.classList.add("revealUp");
+      window.setTimeout(() => {
+        mask.classList.add("hidden");
+        mask.classList.remove("revealUp", "dragging");
+        mask.style.removeProperty("--dragY");
+      }, 320);
+      return;
+    }
+
+    resetDrag();
+  };
+
+  mask.addEventListener("pointerup", finishGesture);
+  mask.addEventListener("pointercancel", () => {
+    active = false;
+    resetDrag();
+  });
+}
+
 function renderReveal() {
   const p = state.players[state.revealIndex];
   $("#revealPrompt").textContent = `Turno de: ${p.name}. Pasa el dispositivo.`;
 
-  $("#revealMask").classList.remove("hidden");
+  $("#revealMask").classList.remove("hidden", "revealUp", "dragging");
+  $("#revealMask").style.removeProperty("--dragY");
   $("#playerWord").textContent = p.word;
   $("#playerRole").textContent = (p.role === "Sombra")
     ? "Rol: SOMBRA (tu realidad está distorsionada)"
@@ -266,7 +317,8 @@ function renderReveal() {
 }
 
 function nextReveal() {
-  $("#revealMask").classList.remove("hidden");
+  $("#revealMask").classList.remove("hidden", "revealUp", "dragging");
+  $("#revealMask").style.removeProperty("--dragY");
 
   state.revealIndex++;
   if (state.revealIndex >= state.players.length) {
