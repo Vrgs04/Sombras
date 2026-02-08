@@ -28,17 +28,6 @@
       </div>
 
       <div class="menuCard">
-        <div class="rowItem" id="rowMode">
-          <div class="left">
-            <span class="i">▦</span>
-            <span class="t">Modo de Juego</span>
-          </div>
-          <div class="right">
-            <span class="v" id="modeLabel">Clásico</span>
-            <span class="chev">›</span>
-          </div>
-        </div>
-
         <div class="rowItem" id="rowPlayers">
           <div class="left">
             <span class="i">👥</span>
@@ -52,16 +41,14 @@
 
         <div class="divider"></div>
 
-        <div class="rowItem">
+        <div class="rowItem" id="rowImpostors">
           <div class="left">
             <span class="i">🥸</span>
             <span class="t">Impostores</span>
-            <span class="dotTip" title="MVP: siempre 1 Sombra">i</span>
           </div>
           <div class="right">
-            <button class="pillBtn" type="button" disabled>−</button>
-            <span class="v mono">1</span>
-            <button class="pillBtn" type="button" disabled>+</button>
+            <span class="v mono" id="impostorsLabel">1</span>
+            <span class="chev">›</span>
           </div>
         </div>
 
@@ -108,10 +95,7 @@
         <input id="playerCount" type="number" min="3" max="12" value="5" />
         <input id="roundCount" type="number" min="2" max="6" value="3" />
         <input id="discussionSeconds" type="number" min="15" max="600" value="180" />
-        <select id="mode">
-          <option value="classic" selected>Clásico (1 Sombra)</option>
-          <option value="no-suspect">Sin sospecha</option>
-        </select>
+        <input id="impostorCount" type="number" min="1" max="2" value="1" />
       </div>
 
       <button class="bigStart green" id="btnStart" type="button">
@@ -165,7 +149,7 @@
 
       <div class="revealBox">
         <div class="revealMask" id="revealMask">
-          <div class="maskText">Toca para revelar</div>
+          <div class="maskText">Desliza hacia arriba para revelar</div>
         </div>
         <div class="revealContent">
           <div class="label">Tu palabra es:</div>

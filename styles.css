@@ -153,7 +153,16 @@ input, select{
   display:grid; place-items:center;
   background: radial-gradient(600px 260px at 50% 30%, rgba(154,167,255,.16), rgba(0,0,0,.70));
   backdrop-filter: blur(6px);
-  cursor:pointer;
+  cursor:grab;
+  touch-action:none;
+  --dragY: 0px;
+  transform: translateY(var(--dragY));
+  transition: transform .25s ease, opacity .25s ease;
+}
+.revealMask.dragging{transition:none}
+.revealMask.revealUp{
+  transform: translateY(-120%);
+  opacity:0;
 }
 .maskText{
   padding:10px 14px;

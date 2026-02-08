@@ -1,5 +1,5 @@
-/* Sombras — MVP (1 dispositivo, sin pistas en pantalla, sin sospechas)
-   - 1 Sombra recibe palabra distorsionada
+/* Sombras — MVP (1 dispositivo, sin pistas en pantalla)
+   - 1 o 2 Sombras reciben palabra distorsionada
    - Rondas = ciclos de discusión con timer
    - Votación por turnos, al terminar aparece "Confirmar votos"
 */
@@ -23,7 +23,7 @@ const state = {
   // config
   roundCount: 3,
   discussionSeconds: 180,
-  mode: "classic",          // lo dejamos por menú (no afecta ya)
+  impostorCount: 1,
   hintEnabled: true,
 
   // setup names
@@ -33,7 +33,7 @@ const state = {
   // deck + chosen
   deck: [],
   chosenPair: null,
-  shadowId: null,
+  shadowIds: [],
 
   // flow
   phase: "setup",
@@ -81,15 +81,15 @@ function init() {
 
   // menu UI
   $("#btnStart").addEventListener("click", startGame);
-  $("#rowMode").addEventListener("click", toggleMode);
   $("#rowPlayers").addEventListener("click", openPlayers);
+  $("#rowImpostors").addEventListener("click", editImpostors);
   $("#rowDuration").addEventListener("click", editDuration);
   $("#rowRounds").addEventListener("click", editRounds);
   $("#hintToggle").addEventListener("change", (e) => state.hintEnabled = !!e.target.checked);
 
   $("#btnSettings").addEventListener("click", () => alert("Ajustes: próximamente 😄"));
   $("#btnHelp").addEventListener("click", () =>
-    alert("Tip: Pistas en persona. Usa el cronómetro para cada ronda, luego voten.")
+    alert("Modo clásico: pistas en persona. Usa el cronómetro para cada ronda, luego voten.")
   );
 
   // players screen
@@ -100,7 +100,7 @@ function init() {
   $("#btnPCountPlus").addEventListener("click", () => changeCount(+1));
 
   // reveal
-  $("#revealMask").addEventListener("click", () => $("#revealMask").classList.add("hidden"));
+  setupRevealGesture();
   $("#btnConfirmSeen").addEventListener("click", nextReveal);
 
   // discussion
@@ -125,8 +125,8 @@ function refreshMenuLabels() {
   $("#playerCount").value = String(state.setupNames.length);
   $("#playersLabel").textContent = String(state.setupNames.length);
 
-  $("#mode").value = state.mode;
-  $("#modeLabel").textContent = (state.mode === "classic") ? "Clásico" : "Sin sospecha";
+  $("#impostorCount").value = String(state.impostorCount);
+  $("#impostorsLabel").textContent = String(state.impostorCount);
 
   $("#discussionSeconds").value = String(state.discussionSeconds);
   const mins = Math.max(1, Math.round(state.discussionSeconds / 60));
@@ -138,8 +138,10 @@ function refreshMenuLabels() {
   $("#hintToggle").checked = state.hintEnabled;
 }
 
-function toggleMode() {
-  state.mode = (state.mode === "classic") ? "no-suspect" : "classic";
+function editImpostors() {
+  const v = prompt("Impostores (1 o 2)", String(state.impostorCount));
+  if (v === null) return;
+  state.impostorCount = clamp(parseInt(v, 10) || state.impostorCount, 1, 2);
   refreshMenuLabels();
 }
 
@@ -216,17 +218,21 @@ function startGame() {
   const n = clamp(parseInt($("#playerCount").value || "5", 10), 3, 12);
   state.roundCount = clamp(parseInt($("#roundCount").value || "3", 10), 2, 6);
   state.discussionSeconds = clamp(parseInt($("#discussionSeconds").value || "180", 10), 15, 600);
+  state.impostorCount = clamp(parseInt($("#impostorCount").value || "1", 10), 1, 2);
 
   const names = getSetupNames(n);
 
   state.chosenPair = state.deck[Math.floor(Math.random() * state.deck.length)];
-  state.shadowId = Math.floor(Math.random() * n);
+  const shuffledIds = Array.from({ length: n }, (_, id) => id).sort(() => Math.random() - 0.5);
+  const impostors = Math.min(state.impostorCount, Math.max(1, n - 1));
+  state.shadowIds = shuffledIds.slice(0, impostors);
+  const shadowSet = new Set(state.shadowIds);
 
   state.players = Array.from({ length: n }, (_, id) => ({
     id,
     name: names[id],
-    role: id === state.shadowId ? "Sombra" : "Luz",
-    word: id === state.shadowId ? state.chosenPair.distorted : state.chosenPair.correct,
+    role: shadowSet.has(id) ? "Sombra" : "Luz",
+    word: shadowSet.has(id) ? state.chosenPair.distorted : state.chosenPair.correct,
   }));
 
   state.revealIndex = 0;
@@ -239,11 +245,62 @@ function startGame() {
   renderReveal();
 }
 
+function setupRevealGesture() {
+  const mask = $("#revealMask");
+  const THRESHOLD = 70;
+  let startY = 0;
+  let active = false;
+
+  const resetDrag = () => {
+    mask.classList.remove("dragging");
+    mask.style.removeProperty("--dragY");
+  };
+
+  mask.addEventListener("pointerdown", (e) => {
+    if (mask.classList.contains("hidden")) return;
+    active = true;
+    startY = e.clientY;
+    mask.classList.add("dragging");
+    mask.setPointerCapture(e.pointerId);
+  });
+
+  mask.addEventListener("pointermove", (e) => {
+    if (!active) return;
+    const deltaY = Math.min(0, e.clientY - startY);
+    mask.style.setProperty("--dragY", `${deltaY}px`);
+  });
+
+  const finishGesture = (e) => {
+    if (!active) return;
+    const deltaY = e.clientY - startY;
+    active = false;
+
+    if (deltaY <= -THRESHOLD) {
+      mask.classList.add("revealUp");
+      window.setTimeout(() => {
+        mask.classList.add("hidden");
+        mask.classList.remove("revealUp", "dragging");
+        mask.style.removeProperty("--dragY");
+      }, 320);
+      return;
+    }
+
+    resetDrag();
+  };
+
+  mask.addEventListener("pointerup", finishGesture);
+  mask.addEventListener("pointercancel", () => {
+    active = false;
+    resetDrag();
+  });
+}
+
 function renderReveal() {
   const p = state.players[state.revealIndex];
   $("#revealPrompt").textContent = `Turno de: ${p.name}. Pasa el dispositivo.`;
 
-  $("#revealMask").classList.remove("hidden");
+  $("#revealMask").classList.remove("hidden", "revealUp", "dragging");
+  $("#revealMask").style.removeProperty("--dragY");
   $("#playerWord").textContent = p.word;
   $("#playerRole").textContent = (p.role === "Sombra")
     ? "Rol: SOMBRA (tu realidad está distorsionada)"
@@ -260,7 +317,8 @@ function renderReveal() {
 }
 
 function nextReveal() {
-  $("#revealMask").classList.remove("hidden");
+  $("#revealMask").classList.remove("hidden", "revealUp", "dragging");
+  $("#revealMask").style.removeProperty("--dragY");
 
   state.revealIndex++;
   if (state.revealIndex >= state.players.length) {
@@ -372,8 +430,8 @@ function showResults() {
   const topCount = sorted[0]?.[1] ?? 0;
   const tied = sorted.filter(([_, c]) => c === topCount).map(([id]) => id);
 
-  const shadowId = state.shadowId;
-  const shadow = state.players.find(p => p.id === shadowId);
+  const shadowSet = new Set(state.shadowIds);
+  const totalShadows = state.shadowIds.length;
 
   let winner = "Sombra";
   let detail = "";
@@ -383,9 +441,14 @@ function showResults() {
     detail = `Hubo empate en el primer lugar. La Sombra se salvó.`;
   } else {
     const topId = tied[0];
-    if (topId === shadowId) {
+    if (shadowSet.has(topId)) {
       winner = "Grupo";
-      detail = `Identificaron correctamente a ${shadow.name} como la Sombra.`;
+      const topP = state.players.find(p => p.id === topId);
+      if (totalShadows === 1) {
+        detail = `Identificaron correctamente a ${topP?.name || "la Sombra"}.`;
+      } else {
+        detail = `Identificaron correctamente a ${topP?.name || "una Sombra"}. (Acertaron 1 de ${totalShadows})`;
+      }
     } else {
       const topP = state.players.find(p => p.id === topId);
       winner = "Sombra";
@@ -400,14 +463,14 @@ function showResults() {
   vr.innerHTML = "";
   for (const [id, c] of sorted) {
     const p = state.players.find(x => x.id === id);
-    const meta = (id === shadowId) ? "SOMBRA" : "Luz";
+    const meta = shadowSet.has(id) ? "SOMBRA" : "Luz";
     vr.appendChild(makeItem(p.name, `Votos: ${c}`, meta));
   }
 
   const ra = $("#revealAll");
   ra.innerHTML = "";
   for (const p of state.players) {
-    const role = (p.id === shadowId) ? "SOMBRA" : "Luz";
+    const role = shadowSet.has(p.id) ? "SOMBRA" : "Luz";
     ra.appendChild(makeItem(p.name, `Palabra: ${p.word}`, role));
   }
 }
