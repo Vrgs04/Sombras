@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sombras</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>Sombras</h1>
+        <p class="sub">Deducción social • MVP</p>
+      </div>
+    </div>
+    <div class="pill" id="phasePill">Menú</div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- MENU PRINCIPAL -->
+    <section class="card hiddenChrome" id="screen-setup">
+      <div class="menuTopSimple">
+        <button class="iconBtn" type="button" id="btnSettings" title="Ajustes">⚙️</button>
+        <button class="iconBtn" type="button" id="btnHelp" title="Ayuda">❔</button>
+      </div>
+
+      <div class="menuCard">
+        <div class="rowItem" id="rowMode">
+          <div class="left">
+            <span class="i">▦</span>
+            <span class="t">Modo de Juego</span>
+          </div>
+          <div class="right">
+            <span class="v" id="modeLabel">Clásico</span>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <div class="rowItem" id="rowPlayers">
+          <div class="left">
+            <span class="i">👥</span>
+            <span class="t">Jugadores</span>
+          </div>
+          <div class="right">
+            <span class="v" id="playersLabel">5</span>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="rowItem">
+          <div class="left">
+            <span class="i">🥸</span>
+            <span class="t">Impostores</span>
+            <span class="dotTip" title="MVP: siempre 1 Sombra">i</span>
+          </div>
+          <div class="right">
+            <button class="pillBtn" type="button" disabled>−</button>
+            <span class="v mono">1</span>
+            <button class="pillBtn" type="button" disabled>+</button>
+          </div>
+        </div>
+
+        <div class="rowItem">
+          <div class="left">
+            <span class="i">🔍</span>
+            <span class="t">Pista para Impostores</span>
+          </div>
+          <div class="right">
+            <label class="switch">
+              <input type="checkbox" id="hintToggle" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="rowItem" id="rowRounds">
+          <div class="left">
+            <span class="i">🔁</span>
+            <span class="t">Rondas</span>
+          </div>
+          <div class="right">
+            <span class="v" id="roundsLabel">3</span>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <div class="rowItem" id="rowDuration">
+          <div class="left">
+            <span class="i">🕒</span>
+            <span class="t">Duración</span>
+          </div>
+          <div class="right">
+            <span class="v" id="durationLabel">3 minutos</span>
+            <span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inputs reales (lógica) -->
+      <div class="hiddenInputs">
+        <input id="playerCount" type="number" min="3" max="12" value="5" />
+        <input id="roundCount" type="number" min="2" max="6" value="3" />
+        <input id="discussionSeconds" type="number" min="15" max="600" value="180" />
+        <select id="mode">
+          <option value="classic" selected>Clásico (1 Sombra)</option>
+          <option value="no-suspect">Sin sospecha</option>
+        </select>
+      </div>
+
+      <button class="bigStart green" id="btnStart" type="button">
+        Iniciar Juego
+      </button>
+
+      <p class="hint" style="margin-top:10px">
+        Pistas y discusión en persona. Aquí solo roles, cronómetro y votación.
+      </p>
+    </section>
+
+    <!-- PANTALLA APARTE: JUGADORES -->
+    <section class="card hiddenChrome hidden" id="screen-players">
+      <div class="playersTop">
+        <button class="backBtn" id="btnPlayersBack" type="button">‹</button>
+        <div>
+          <div class="playersTitle">Jugadores</div>
+          <div class="playersSub muted">Edita nombres y cantidad</div>
+        </div>
+        <div style="width:44px"></div>
+      </div>
+
+      <div class="menuCard">
+        <div class="rowItem" style="cursor:default">
+          <div class="left">
+            <span class="i">👥</span>
+            <span class="t">Cantidad</span>
+          </div>
+          <div class="right">
+            <button class="pillBtn" id="btnPCountMinus" type="button">−</button>
+            <span class="v mono" id="pCountLabel">5</span>
+            <button class="pillBtn" id="btnPCountPlus" type="button">+</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="playersList" id="playersList"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="btnPlayersCancel" type="button">Cancelar</button>
+        <button class="btn primary" id="btnPlayersSave" type="button">Guardar</button>
+      </div>
+    </section>
+
+    <!-- ROLE REVEAL -->
+    <section class="card hidden" id="screen-reveal">
+      <h2>Revelar palabra</h2>
+      <p class="muted" id="revealPrompt"></p>
+
+      <div class="revealBox">
+        <div class="revealMask" id="revealMask">
+          <div class="maskText">Toca para revelar</div>
+        </div>
+        <div class="revealContent">
+          <div class="label">Tu palabra es:</div>
+          <div class="word" id="playerWord">—</div>
+          <div class="small muted" id="playerRole">—</div>
+          <div class="small muted" id="shadowHint" style="margin-top:8px; display:none"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="btnConfirmSeen">Ya la vi</button>
+      </div>
+      <p class="hint">No digas la palabra. Da pistas en persona.</p>
+    </section>
+
+    <!-- DISCUSIÓN (solo cronómetro + guía) -->
+    <section class="card hidden" id="screen-discussion">
+      <div class="row">
+        <h2 id="discTitle">Discusión</h2>
+        <div class="timer">
+          <span class="muted">Tiempo:</span>
+          <span class="time" id="timerText">—</span>
+        </div>
+      </div>
+
+      <p class="muted" id="discText"></p>
+
+      <div class="panelLight">
+        <h3>Guía rápida</h3>
+        <div class="list">
+          <div class="item"><div class="txt"><b>Ronda:</b> todos den una pista <b>hablando</b> (sin decir la palabra).</div></div>
+          <div class="item"><div class="txt">Hagan preguntas cortas: “¿Dónde lo verías?”, “¿Para qué sirve?”, “¿Qué sensación da?”.</div></div>
+          <div class="item"><div class="txt">Busquen incoherencias. La Sombra intenta sonar normal.</div></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="btnAddTime">+30s</button>
+        <button class="btn ghost" id="btnNextRound">Siguiente ronda</button>
+        <button class="btn primary" id="btnToVote">Votar</button>
+      </div>
+    </section>
+
+    <!-- VOTE (mejorada) -->
+    <section class="card hidden" id="screen-vote">
+      <h2>Votación</h2>
+      <p class="muted" id="voteHelp">
+        Voten por turnos. Pasen el dispositivo. Al final aparecerá <b>Confirmar votos</b>.
+      </p>
+
+      <div class="voteBox">
+        <div class="row">
+          <div class="tag" id="voteTurnTag">Vota: —</div>
+          <div class="muted">Turno <span id="voteTurnIdx">1</span>/<span id="voteTurnTotal">—</span></div>
+        </div>
+
+        <label class="field">
+          <span>Tu voto</span>
+          <select id="voteSelect"></select>
+        </label>
+
+        <div class="voteMini">
+          <div class="muted">Progreso</div>
+          <div class="bar">
+            <div class="barFill" id="voteBar"></div>
+          </div>
+          <div class="muted"><span id="voteDone">0</span>/<span id="voteNeed">0</span> votos</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnCastVote">Guardar voto</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- aparece solo al terminar -->
+      <button class="btn primary hidden" id="btnConfirmVotes">Confirmar votos</button>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="card hidden" id="screen-results">
+      <h2>Resultados</h2>
+
+      <div class="resultGrid">
+        <div class="panel">
+          <h3>Ganador</h3>
+          <div class="winner" id="winnerText">—</div>
+          <p class="muted" id="winnerDetail">—</p>
+        </div>
+
+        <div class="panel">
+          <h3>Votos</h3>
+          <div id="voteResults" class="list"></div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <details>
+        <summary>Revelar roles y palabras</summary>
+        <div id="revealAll" class="list"></div>
+      </details>
+
+      <div class="actions">
+        <button class="btn ghost" id="btnNewGame">Nueva partida</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <span class="muted">Sombras • JavaScript</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
